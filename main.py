@@ -87,7 +87,8 @@ class ExpenseForwarder:
             logger.info("Converting to Splitwise expense...")
             splitwise_expense = self.expense_converter.convert_to_splitwise_expense(
                 openai_response.parsed_expense,
-                group_id
+                group_id,
+                openai_response.email_summary
             )
             
             # Create expense in Splitwise

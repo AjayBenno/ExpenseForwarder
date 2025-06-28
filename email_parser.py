@@ -39,22 +39,25 @@ Extract the following information and return it as a JSON object:
         "amount": float (the total amount),
         "currency": "3-letter currency code (default: USD)",
         "date": "YYYY-MM-DD format if mentioned, null otherwise",
-        "category": "expense category if apparent (e.g., 'Food', 'Transportation', 'Entertainment')",
+        "category": "expense category if apparent (e.g., 'Food', 'Transportation', 'Utilities', 'Entertainment')",
         "participants": ["list", "of", "participant", "names", "or", "emails"],
         "split_type": "equal|exact|percentage (default: equal)",
         "paid_by": "name or email of who paid (if mentioned)"
     }},
     "confidence": float (0.0 to 1.0 - how confident you are in the parsing),
-    "notes": "Any additional notes about the parsing or ambiguities"
+    "notes": "Any additional notes about the parsing or ambiguities",
+    "email_summary": "Brief 1-2 sentence summary of what this email is about"
 }}
 
 Guidelines:
 1. Extract the main expense amount (ignore taxes, tips unless they're part of the total)
-2. If multiple people are mentioned, add them to participants
-3. Look for keywords like "split", "share", "owe", "paid" to identify participants
-4. Default to "equal" split unless specific amounts or percentages are mentioned
-5. If the email is clearly not about an expense, set confidence to 0.0
-6. Be conservative with confidence - only use high confidence (>0.8) if information is very clear
+2. For dates: Look for expense dates, due dates, bill dates, service dates (not just email dates). Parse formats like "06/06/2025", "June 6, 2025", "2025-06-06", etc.
+3. If multiple people are mentioned, add them to participants
+4. Look for keywords like "split", "share", "owe", "paid" to identify participants
+5. Default to "equal" split unless specific amounts or percentages are mentioned
+6. If the email is clearly not about an expense, set confidence to 0.0
+7. Be conservative with confidence - only use high confidence (>0.8) if information is very clear
+8. Create a concise email summary that captures the essence of what this expense is for
 
 Return ONLY the JSON object, no additional text.
 """

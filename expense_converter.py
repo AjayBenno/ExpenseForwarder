@@ -25,8 +25,13 @@ class ExpenseConverter:
             logger.error(f"Failed to load current user: {e}")
             raise
     
-    def convert_to_splitwise_expense(self, parsed_expense: ParsedExpense, group_id: int) -> SplitwiseExpense:
+    def convert_to_splitwise_expense(self, parsed_expense: ParsedExpense, group_id: int, email_summary: str = None) -> SplitwiseExpense:
         """Convert parsed expense to Splitwise expense object."""
+        
+        # Format date if available
+        date_str = None
+        if parsed_expense.date:
+            date_str = parsed_expense.date.strftime("%Y-%m-%dT%H:%M:%SZ") if hasattr(parsed_expense.date, 'strftime') else str(parsed_expense.date)
         
         # For equal splits, don't include users - authenticated user is assumed to be payer
         # and expense is split equally among all group members
@@ -34,12 +39,18 @@ class ExpenseConverter:
             cost=f"{parsed_expense.amount:.2f}",
             description=parsed_expense.description,
             currency_code=parsed_expense.currency,
+            date=date_str,
+            details=email_summary,  # Add email summary as details/notes
             group_id=group_id,
             users=None,  # Don't include users for equal split
             split_equally=True
         )
         
         logger.info(f"Created expense: {splitwise_expense.description} - ${splitwise_expense.cost} for group {group_id}")
+        if date_str:
+            logger.info(f"Expense date: {date_str}")
+        if email_summary:
+            logger.info(f"Details: {email_summary}")
         
         return splitwise_expense
 

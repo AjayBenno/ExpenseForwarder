@@ -45,8 +45,9 @@ class SplitwiseExpense(BaseModel):
     
     cost: str = Field(..., description="Total cost of the expense")
     description: str = Field(..., description="Description of the expense")
+    details: Optional[str] = Field(default=None, description="Additional details/notes about the expense")
     currency_code: str = Field(default="USD", description="Currency code")
-    date: Optional[str] = Field(default=None, description="Date in YYYY-MM-DD format")
+    date: Optional[str] = Field(default=None, description="Date in ISO format (YYYY-MM-DDTHH:MM:SSZ)")
     category_id: Optional[int] = Field(default=None, description="Category ID")
     group_id: Optional[int] = Field(default=None, description="Group ID (required for group expenses)")
     users: Optional[List[SplitwiseUser]] = Field(default=None, description="List of users involved in the expense")
@@ -84,4 +85,5 @@ class OpenAIResponse(BaseModel):
     
     parsed_expense: ParsedExpense = Field(..., description="Parsed expense data")
     confidence: float = Field(..., ge=0, le=1, description="Confidence score of the parsing")
-    notes: Optional[str] = Field(default=None, description="Additional notes about the parsing") 
+    notes: Optional[str] = Field(default=None, description="Additional notes about the parsing")
+    email_summary: Optional[str] = Field(default=None, description="Brief summary of the email content") 
