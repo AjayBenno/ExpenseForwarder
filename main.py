@@ -94,11 +94,15 @@ class ExpenseForwarder:
             logger.info("Creating expense in Splitwise...")
             response = self.splitwise_client.create_expense(splitwise_expense)
             
-            logger.info(f"Successfully created expense: {response.expense.get('id')}")
+            # Get the first (and typically only) expense from the response
+            expense = response.expenses[0] if response.expenses else {}
+            expense_id = expense.get('id')
+            
+            logger.info(f"Successfully created expense: {expense_id}")
             
             return {
                 'success': True,
-                'expense_id': response.expense.get('id'),
+                'expense_id': expense_id,
                 'description': splitwise_expense.description,
                 'amount': splitwise_expense.cost,
                 'currency': splitwise_expense.currency_code,

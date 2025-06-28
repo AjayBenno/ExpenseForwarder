@@ -62,7 +62,8 @@ class SplitwiseExpense(BaseModel):
 class SplitwiseExpenseResponse(BaseModel):
     """Splitwise API response for expense creation."""
     
-    expense: Dict[str, Any] = Field(..., description="Created expense data")
+    expenses: List[Dict[str, Any]] = Field(..., description="Created expenses data")
+    errors: Dict[str, Any] = Field(default_factory=dict, description="API errors")
 
 class EmailContent(BaseModel):
     """Email content model."""
