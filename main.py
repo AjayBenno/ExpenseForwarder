@@ -37,8 +37,16 @@ class ExpenseForwarder:
         self.email_parser = create_email_parser()
         self.splitwise_client = create_splitwise_client(access_token)
         
-        # Initialize converter only after successful authentication
-        self.expense_converter = None
+        # Initialize converter if access token is provided
+        if access_token:
+            try:
+                self.expense_converter = create_expense_converter(self.splitwise_client)
+                logger.info("Initialized expense converter with provided access token")
+            except Exception as e:
+                logger.warning(f"Failed to initialize expense converter with provided token: {e}")
+                self.expense_converter = None
+        else:
+            self.expense_converter = None
     
     def authenticate_splitwise(self) -> str:
         """Authenticate with Splitwise and return access token."""
@@ -57,9 +65,7 @@ class ExpenseForwarder:
             logger.error(f"Authentication failed: {e}")
             raise
     
-    def process_email(self, subject: str, body: str, 
-                     group_id: Optional[int] = None,
-                     min_confidence: float = 0.5) -> dict:
+    def process_email(self, subject: str, body: str, group_id: int) -> dict:
         """Process email content and create Splitwise expense."""
         
         if not self.expense_converter:
@@ -77,20 +83,12 @@ class ExpenseForwarder:
             
             logger.info(f"OpenAI parsing confidence: {openai_response.confidence:.2f}")
             
-            # Validate confidence
-            if not self.email_parser.validate_parsing_confidence(openai_response, min_confidence):
-                raise ValueError(f"Parsing confidence ({openai_response.confidence:.2f}) below minimum threshold ({min_confidence})")
-            
             # Convert to Splitwise expense
             logger.info("Converting to Splitwise expense...")
             splitwise_expense = self.expense_converter.convert_to_splitwise_expense(
                 openai_response.parsed_expense,
-                group_id=group_id
+                group_id
             )
-            
-            # Validate expense
-            if not self.expense_converter.validate_expense(splitwise_expense):
-                raise ValueError("Expense validation failed")
             
             # Create expense in Splitwise
             logger.info("Creating expense in Splitwise...")
@@ -105,8 +103,7 @@ class ExpenseForwarder:
                 'amount': splitwise_expense.cost,
                 'currency': splitwise_expense.currency_code,
                 'confidence': openai_response.confidence,
-                'notes': openai_response.notes,
-                'splitwise_response': response.expense
+                'notes': openai_response.notes
             }
             
         except Exception as e:
@@ -153,11 +150,9 @@ class ExpenseForwarder:
 def main():
     """Main entry point for command line usage."""
     parser = argparse.ArgumentParser(description='Forward email expenses to Splitwise')
-    parser.add_argument('--subject', required=True, help='Email subject')
-    parser.add_argument('--body', required=True, help='Email body')
-    parser.add_argument('--group-id', type=int, help='Splitwise group ID')
-    parser.add_argument('--min-confidence', type=float, default=0.5, 
-                       help='Minimum confidence threshold (0.0-1.0)')
+    parser.add_argument('--subject', help='Email subject')
+    parser.add_argument('--body', help='Email body')
+    parser.add_argument('--group-id', type=int, help='Splitwise group ID (required for expense creation)')
     parser.add_argument('--access-token', help='Splitwise access token (optional)')
     parser.add_argument('--auth-only', action='store_true', 
                        help='Only perform authentication and exit')
@@ -169,6 +164,14 @@ def main():
                        help='List groups and exit')
     
     args = parser.parse_args()
+    
+    # Check if subject, body, and group_id are required (not for info commands)
+    info_commands = [args.auth_only, args.user_info, args.list_friends, args.list_groups]
+    if not any(info_commands):
+        if not args.subject or not args.body:
+            parser.error("--subject and --body are required unless using info commands (--auth-only, --user-info, --list-friends, --list-groups)")
+        if not args.group_id:
+            parser.error("--group-id is required for expense creation")
     
     try:
         # Initialize forwarder
@@ -208,8 +211,7 @@ def main():
         result = forwarder.process_email(
             subject=args.subject,
             body=args.body,
-            group_id=args.group_id,
-            min_confidence=args.min_confidence
+            group_id=args.group_id
         )
         
         if result['success']:

@@ -49,7 +49,7 @@ class SplitwiseExpense(BaseModel):
     date: Optional[str] = Field(default=None, description="Date in YYYY-MM-DD format")
     category_id: Optional[int] = Field(default=None, description="Category ID")
     group_id: Optional[int] = Field(default=None, description="Group ID (required for group expenses)")
-    users: List[SplitwiseUser] = Field(..., description="List of users involved in the expense")
+    users: Optional[List[SplitwiseUser]] = Field(default=None, description="List of users involved in the expense")
     split_equally: bool = Field(default=True, description="Whether to split equally")
     
     class Config:
@@ -57,6 +57,7 @@ class SplitwiseExpense(BaseModel):
         json_encoders = {
             Decimal: str
         }
+        exclude_none = True  # Exclude None values from JSON
 
 class SplitwiseExpenseResponse(BaseModel):
     """Splitwise API response for expense creation."""

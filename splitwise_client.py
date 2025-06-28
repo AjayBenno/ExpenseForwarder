@@ -77,19 +77,35 @@ class SplitwiseClient:
     
     def exchange_code_for_token(self, auth_code: str) -> str:
         """Exchange authorization code for access token."""
-        oauth = OAuth2Session(
-            client_id=self.client_id,
-            redirect_uri=self.redirect_uri
-        )
-        
         try:
-            token = oauth.fetch_token(
-                token_url=self.token_url,
-                code=auth_code,
-                client_secret=self.client_secret
+            # Prepare token request data
+            token_data = {
+                'client_id': self.client_id,
+                'client_secret': self.client_secret,
+                'grant_type': 'authorization_code',
+                'code': auth_code,
+                'redirect_uri': self.redirect_uri
+            }
+            
+            # Make token request
+            response = requests.post(
+                self.token_url,
+                data=token_data,
+                headers={'Accept': 'application/json'}
             )
             
-            self.access_token = token['access_token']
+            logger.info(f"Token response status: {response.status_code}")
+            logger.info(f"Token response headers: {dict(response.headers)}")
+            
+            response.raise_for_status()
+            token_response = response.json()
+            
+            logger.info(f"Token response: {token_response}")
+            
+            if 'access_token' not in token_response:
+                raise ValueError(f"Access token not found in response: {token_response}")
+            
+            self.access_token = token_response['access_token']
             self.session.headers.update({
                 'Authorization': f'Bearer {self.access_token}',
                 'Content-Type': 'application/json'
@@ -98,6 +114,10 @@ class SplitwiseClient:
             logger.info("Successfully obtained access token")
             return self.access_token
             
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"HTTP error during token exchange: {e}")
+            logger.error(f"Response content: {e.response.text if e.response else 'No response'}")
+            raise
         except Exception as e:
             logger.error(f"Error exchanging code for token: {e}")
             raise
@@ -213,6 +233,12 @@ class SplitwiseClient:
         logger.info(f"Creating expense with data: {json.dumps(expense_data, indent=2)}")
         
         response = self._make_request('POST', 'create_expense', expense_data)
+        logger.info(f"Splitwise response: {json.dumps(response, indent=2)}")
+        
+        # Check if response contains errors
+        if 'errors' in response and response['errors']:
+            raise ValueError(f"Splitwise API error: {response['errors']}")
+        
         return SplitwiseExpenseResponse(**response)
     
     def get_expenses(self, limit: int = 10) -> List[Dict[str, Any]]:
